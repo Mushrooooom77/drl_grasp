@@ -14,23 +14,6 @@
 夹爪在接触前误碰目标物体或桌面；抓取过程中发生与障碍物的碰撞；总步数超过设定上限（例如 100 步）。
 实验中，每次重置环境时，目标物体与场景中两个红色立方体障碍物的位置都会进行随机初始化，确保策略具备较强的泛化能力。在该场景中，智能体通过状态输入学习夹爪控制策略，实现对目标的精准抓取。
 
-```bash
-FR5_Reinforcement-Learning/
-├── FR_Gym/ # 自定义 Gym 环境封装
-│ ├── Fr5_env.py # 主环境定义文件
-│ ├── reward.py # 奖励函数定义
-│ └── Callback.py # 自定义 TensorBoard 回调
-├── utils/ # 参数读取与训练工具
-│ └── arguments.py # 命令行参数读取
-├── models/ # 训练保存的模型（自动生成）
-├── logs/ # TensorBoard 与训练日志
-├── checkpoints/ # 中间模型保存（每 N 步保存）
-├── Fr5_train.py # 主训练入口（可选算法与多进程）
-├── test.py # 测试脚本
-├── requirements.txt # pip 依赖列表
-└── README.md # 本说明文件
-
-```
 ## How to use
 ```bash
 pip install -r requirments.txt
