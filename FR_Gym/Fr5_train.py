@@ -3,9 +3,10 @@ import sys
 import time
 from loguru import logger
 
+# Prevent MKL errors when using torch with numpy
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
-# === 添加 utils 路径 ===
+# === Add utils directory to sys.path ===
 script_dir = os.path.abspath(os.path.dirname(__file__) if '__file__' in globals() else os.getcwd())
 sys.path.append(os.path.join(script_dir, '../utils'))
 
@@ -20,6 +21,7 @@ from FR_Gym.Fr5_env import FR5_Env
 from FR_Gym.Callback import TensorboardCallback
 from utils.arguments import get_args
 
+# Time string for naming logs/models
 now = time.strftime('%m%d-%H%M%S', time.localtime())
 args, kwargs = get_args()
 
@@ -28,33 +30,33 @@ logs_dir = args.logs_dir
 checkpoints = args.checkpoints
 test = args.test
 
-# 自动创建所需目录
+# Automatically create necessary directories
 for d in [models_dir, logs_dir, checkpoints]:
     os.makedirs(d, exist_ok=True)
 
-# ========== 多进程环境创建函数 ==========
+# ========== Environment creation function for multi-processing ==========
 def make_env(rank):
     def _init():
         try:
-            gui = (rank == 0)
+            gui = (rank == 0)  # GUI only on the first process
             env = FR5_Env(gui=gui)
             env = Monitor(env, logs_dir)
             env.reset()
             return env
         except Exception as e:
             import traceback
-            print(f"[make_env-{rank}] Environment init failed:\n{traceback.format_exc()}")
+            print(f"[make_env-{rank}] Environment initialization failed:\n{traceback.format_exc()}")
             raise e
     set_random_seed(rank)
     return _init
 
-# ========== 主函数入口 ==========
+# ========== Main Training ==========
 if __name__ == '__main__':
     try:
         num_train = 8
         env = SubprocVecEnv([make_env(i) for i in range(num_train)])
     except Exception:
-        print("多进程创建失败，退回到 DummyVecEnv 单进程模式")
+        print("Subprocess environment creation failed. Falling back to DummyVecEnv.")
         env = DummyVecEnv([make_env(0)])
 
     new_logger = configure(logs_dir, ["stdout", "csv", "tensorboard"])
@@ -65,7 +67,7 @@ if __name__ == '__main__':
         verbose=1,
         tensorboard_log=logs_dir,
         batch_size=256,
-        device="cuda",
+        device="cuda",  # Switch to "cpu" if GPU is not available
     )
     model.set_logger(new_logger)
 

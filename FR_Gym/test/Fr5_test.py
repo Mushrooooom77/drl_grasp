@@ -1,23 +1,15 @@
-'''
- @Author: Prince Wang 
- @Date: 2024-02-22 
- @Last Modified by:   Prince Wang 
- @Last Modified time: 2023-10-24 23:04:04 
-'''
-
 import os
 import sys
 import time
 from loguru import logger
 
-# ✅ 修复路径兼容性，确保可以从 test/ 目录下正确导入模块
+#  Fix path compatibility to ensure proper import from test/ directory
 base_dir = os.path.abspath(os.path.dirname(__file__) if '__file__' in globals() else os.getcwd())
-sys.path.append(os.path.join(base_dir, ".."))  # ← 添加这一行，指向 FR_Gym
-sys.path.append(os.path.join(base_dir, "../utils"))  # 如果 arguments.py 在 utils 目录中
-
+sys.path.append(os.path.join(base_dir, ".."))  # Add parent directory to access FR_Gym
+sys.path.append(os.path.join(base_dir, "../utils"))  # Add utils directory if arguments.py is there
 
 from stable_baselines3 import PPO
-from Fr5_env import FR5_Env
+from FR_Gym.Fr5_env import FR5_Env
 from utils.arguments import get_args
 
 if __name__ == '__main__':
@@ -25,7 +17,7 @@ if __name__ == '__main__':
     env = FR5_Env(gui=args.gui)
     env.render()
 
-    # 加载训练模型
+    # Load trained model
     logger.info(f"Loading model from {args.model_path}")
     model = PPO.load(args.model_path)
 
@@ -46,11 +38,11 @@ if __name__ == '__main__':
 
         if info['is_success']:
             success_num += 1
-            logger.success(f"[{i}] Success ✅ | Reward: {score:.2f}")
+            logger.success(f"[{i}] Success  | Reward: {score:.2f}")
         else:
-            logger.warning(f"[{i}] Failed ❌ | Reward: {score:.2f}")
+            logger.warning(f"[{i}] Failed  | Reward: {score:.2f}")
 
     success_rate = success_num / test_num
-    logger.info(f"✅ Test finished. Success Rate: {success_rate * 100:.2f}% ({success_num}/{test_num})")
+    logger.info(f" Test finished. Success Rate: {success_rate * 100:.2f}% ({success_num}/{test_num})")
     env.close()
 

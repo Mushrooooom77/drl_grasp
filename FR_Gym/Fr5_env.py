@@ -12,10 +12,8 @@ from pybullet_utils import bullet_client
 from scipy.spatial.transform import Rotation as R
 from loguru import logger
 import random
-# ❌ 原来
 
-
-# ✅ 改成（兼容导入）
+# ✅ Compatible import for reward function
 try:
     from .reward import grasp_reward
 except ImportError:
@@ -30,17 +28,16 @@ class FR5_Env(gym.Env):
         self.step_num = 0
         self.Con_cube = None
 
-        # 动作空间（前6为关节，第7维为夹爪）
-        low_action = np.array([-1.0]*6 + [0.0])
-        high_action = np.array([1.0]*6 + [1.0])
+        # Action space: 6 DOF for joints + 1 for gripper
+        low_action = np.array([-1.0] * 6 + [0.0])
+        high_action = np.array([1.0] * 6 + [1.0])
         self.action_space = spaces.Box(low=low_action, high=high_action, dtype=np.float32)
 
-        # 观测空间（+1维 Fx 夹爪总力）
+        # Observation space: 13-dim (position, joint angles, target pos, grip force)
         low = np.zeros((1, 13), dtype=np.float32)
         high = np.ones((1, 13), dtype=np.float32)
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
-        # 初始化 PyBullet
         if gui:
             self.p = bullet_client.BulletClient(connection_mode=p.GUI)
         else:
@@ -72,31 +69,31 @@ class FR5_Env(gym.Env):
         self.p.changeDynamics(self.fr5, 8, lateralFriction=1.0)
         self.p.changeDynamics(self.fr5, 9, lateralFriction=1.0)
 
-        # 启用夹爪力传感器
+        # Enable gripper force sensors
         self.p.enableJointForceTorqueSensor(self.fr5, 8, enableSensor=True)
         self.p.enableJointForceTorqueSensor(self.fr5, 9, enableSensor=True)
 
-        # 创建障碍物（两个红色盒子）
+        # Create obstacles (two red boxes)
         self.obstacle_ids = []
         for i in range(2):
             obs_shape = self.p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.05, 0.05, 0.05])
             obs_body = self.p.createMultiBody(baseMass=0,
                                               baseCollisionShapeIndex=obs_shape,
-                                              basePosition=[0.3 + 0.1*i, 0.65, 0.05])
+                                              basePosition=[0.3 + 0.1 * i, 0.65, 0.05])
             self.p.changeVisualShape(obs_body, -1, rgbaColor=[1, 0, 0, 1])
             self.obstacle_ids.append(obs_body)
 
     def step(self, action):
         info = {}
-        joint_angles = [p.getJointState(self.fr5, i)[0] for i in [1,2,3,4,5,6]]
+        joint_angles = [p.getJointState(self.fr5, i)[0] for i in [1, 2, 3, 4, 5, 6]]
         target_angles = np.array(joint_angles) + (np.array(action[0:6]) / 180 * np.pi)
 
-        # 控制夹爪闭合程度（0.0=张开，1.0=闭合）
+        # Gripper control (0=open, 1=close)
         grip_cmd = action[6]
         grip_pos = 0.04 * (1.0 - grip_cmd)
 
-        p.setJointMotorControlArray(self.fr5, [1,2,3,4,5,6], p.POSITION_CONTROL, targetPositions=target_angles)
-        p.setJointMotorControlArray(self.fr5, [8,9], p.POSITION_CONTROL, targetPositions=[grip_pos, grip_pos])
+        p.setJointMotorControlArray(self.fr5, [1, 2, 3, 4, 5, 6], p.POSITION_CONTROL, targetPositions=target_angles)
+        p.setJointMotorControlArray(self.fr5, [8, 9], p.POSITION_CONTROL, targetPositions=[grip_pos, grip_pos])
 
         for _ in range(20):
             self.p.stepSimulation()
@@ -115,18 +112,18 @@ class FR5_Env(gym.Env):
 
         neutral_angle = [-49.46, -57.60, -138.39, -164.00, -49.46, 0, 0, 0]
         neutral_angle = [x * math.pi / 180 for x in neutral_angle]
-        p.setJointMotorControlArray(self.fr5, [1,2,3,4,5,6,8,9], p.POSITION_CONTROL, targetPositions=neutral_angle)
+        p.setJointMotorControlArray(self.fr5, [1, 2, 3, 4, 5, 6, 8, 9], p.POSITION_CONTROL, targetPositions=neutral_angle)
 
-        # 目标位置
+        # Target object position
         self.goalx = np.random.uniform(-0.2, 0.2)
         self.goaly = np.random.uniform(0.6, 0.8)
         self.goalz = np.random.uniform(0.1, 0.3)
         self.target_position = [self.goalx, self.goaly, self.goalz]
         self.targettable_position = [self.goalx, self.goaly, self.goalz - 0.175]
-        self.p.resetBasePositionAndOrientation(self.targettable, self.targettable_position, [0,0,0,1])
-        self.p.resetBasePositionAndOrientation(self.target, self.target_position, [0,0,0,1])
+        self.p.resetBasePositionAndOrientation(self.targettable, self.targettable_position, [0, 0, 0, 1])
+        self.p.resetBasePositionAndOrientation(self.target, self.target_position, [0, 0, 0, 1])
 
-        # 生成合理障碍物位置
+        # Generate valid obstacle positions avoiding the target
         def generate_valid_positions(forbidden_zones, num=2, min_dist=0.1, max_trials=100):
             positions = []
             trials = 0
@@ -134,12 +131,7 @@ class FR5_Env(gym.Env):
                 x = np.random.uniform(-0.2, 0.2)
                 y = np.random.uniform(0.6, 0.8)
                 candidate = np.array([x, y])
-                valid = True
-                for zone in forbidden_zones + positions:
-                    if np.linalg.norm(candidate - np.array(zone)) < min_dist:
-                        valid = False
-                        break
-                if valid:
+                if all(np.linalg.norm(candidate - np.array(zone)) >= min_dist for zone in forbidden_zones + positions):
                     positions.append((x, y))
                 trials += 1
             return positions
@@ -147,7 +139,7 @@ class FR5_Env(gym.Env):
         forbidden_positions = [(0, 0.5), (self.goalx, self.goaly)]
         obstacle_xy = generate_valid_positions(forbidden_positions, num=2, min_dist=0.12)
         for i, (x, y) in enumerate(obstacle_xy):
-            self.p.resetBasePositionAndOrientation(self.obstacle_ids[i], [x, y, 0.05], [0,0,0,1])
+            self.p.resetBasePositionAndOrientation(self.obstacle_ids[i], [x, y, 0.05], [0, 0, 0, 1])
 
         for _ in range(100):
             self.p.stepSimulation()
