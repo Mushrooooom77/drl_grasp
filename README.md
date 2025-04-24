@@ -18,6 +18,13 @@ In the simulation, the workspace is a 40cm × 40cm × 20cm area in front of the 
 
 In each episode, the environment is reset with random positions for the target object and two red cube obstacles, ensuring the policy has strong generalization capabilities. In this scenario, the agent learns the control strategy for the gripper through state inputs to achieve accurate and reliable grasps.
 
+## Main code
+- fr5_description: Stores the URDF model files of the robotic arm.
+- Fr5_env.py: Constructs the reinforcement learning environment.
+- Fr5_train.py: Contains the reinforcement learning training code.
+- FR5_test.py: Used for reinforcement learning testing.
+
+
 ## How to use
 ```bash
 pip install -r requirments.txt
