@@ -35,5 +35,5 @@ python -m FR_Gym.Fr5_train --timesteps 30000 --gui False
 ```
 ### Test
 ```bash
-python test.py --model_path ./models/PPO-run-episode9.zip
+python -m FR_Gym.test.Fr5_test --model_path ./models/PPO/PPO-run-episode219
 ```
